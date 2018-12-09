@@ -1,0 +1,15 @@
+[package]
+name = "prompt"
+version = "0.1.0"
+authors = ["Rasmus Kildevæld <rasmuskildevaeld@gmail.com>"]
+edition = "2018"
+
+[[example]]
+name = "inquirer"
+path = "examples/inquirer.rs"
+
+
+[dependencies]
+termion = "^1.5.1"
+error-chain = "^0.12"
+
