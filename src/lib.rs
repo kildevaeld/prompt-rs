@@ -1,4 +1,4 @@
-#![feature(try_trait)]
+//#![feature(try_trait)]
 
 extern crate termion;
 #[macro_use]

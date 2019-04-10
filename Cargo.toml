@@ -10,6 +10,6 @@ path = "examples/inquirer.rs"
 
 
 [dependencies]
-termion = "^1.5.1"
-error-chain = "^0.12"
+termion = "~1.5.1"
+error-chain = "~0.12"
 
