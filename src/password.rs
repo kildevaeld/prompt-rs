@@ -35,6 +35,11 @@ pub struct Password<'de> {
 }
 
 impl<'de> Password<'de> {
+
+    pub fn new(msg: &'de str) -> PasswordBuilder<'de> {
+        PasswordBuilder::new(msg)
+    }
+
     pub fn run(&self) -> Result<String> {
         let stdin = stdin();
         let mut stdout = stdout();

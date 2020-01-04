@@ -29,6 +29,7 @@ impl<'a> InputBuilder<'a> {
             theme: self.theme,
         }
     }
+
 }
 
 pub struct Input<'a> {
@@ -37,6 +38,11 @@ pub struct Input<'a> {
 }
 
 impl<'a> Input<'a> {
+
+    pub fn new(msg: &'a str) -> InputBuilder<'a> {
+        InputBuilder::new(msg)
+    }
+
     pub fn run(&self) -> Result<String> {
         let mut stdin = stdin();
         let mut stdout = stdout();

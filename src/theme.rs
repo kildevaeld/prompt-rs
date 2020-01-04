@@ -1,7 +1,10 @@
 use super::error::Result;
+use super::Choice;
 use std::fmt;
 use std::io::Write;
-use termion::{color, style};
+use std::iter::FromIterator;
+use strip_ansi_escapes::strip as normalize;
+use termion::{color, style, clear};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Color {
@@ -36,9 +39,27 @@ impl fmt::Display for Color {
     }
 }
 
+
+pub struct Indicator {
+    pub active: String,
+    pub inactive: String
+}
+
+impl Indicator {
+    pub fn as_str<'a>(&'a self, active: bool) -> &'a str {
+        if active {
+            self.active.as_str()
+        } else {
+            self.inactive.as_str()
+        }
+    }
+}
+
 pub struct Theme {
     results: Color,
     prefix: String,
+    highlight_indicator: Indicator,
+    selected_indicator: Indicator
 }
 
 impl Default for Theme {
@@ -46,6 +67,14 @@ impl Default for Theme {
         Theme {
             results: Color::Cyan,
             prefix: Color::Green.wrap("[?] "),
+            selected_indicator: Indicator {
+                active: "◉".to_string(),
+                inactive: "◯".to_string()
+            },
+            highlight_indicator: Indicator {
+                active: "❯".to_string(),
+                inactive: " ".to_string()
+            }
         }
     }
 }
@@ -68,10 +97,49 @@ impl Theme {
     pub fn print_results<R: Write>(&self, output: &mut R, msg: &str, answer: &str) -> Result<()> {
         Ok(write!(
             output,
-            "\r{}{} {}\n\r",
+            "{}\r{}{} {}\n\r",
+            clear::CurrentLine,
             self.prefix,
             msg,
             self.results.wrap(answer),
+        )?)
+    }
+
+    pub fn print_choice<R: Write, C: Choice>(
+        &self,
+        output: &mut R,
+        choice: &C,
+        highlighted: bool,
+    ) -> Result<()> {
+        let prefix = normalize(&self.prefix)?;
+        let space = String::from_iter((0..prefix.len()).map(|_| ' '));
+        Ok(write!(
+            output,
+            "{}\r{}{} {}",
+            clear::CurrentLine,
+            space,
+            self.highlight_indicator.as_str(highlighted),
+            choice.text()
+        )?)
+    }
+
+    pub fn print_multiple_choice<R: Write, C: Choice>(
+        &self,
+        output: &mut R,
+        choice: &C,
+        highlighted: bool,
+        selected: bool,
+    ) -> Result<()> {
+        let prefix = normalize(&self.prefix)?;
+        let space = String::from_iter((0..prefix.len()).map(|_| ' '));
+        Ok(write!(
+            output,
+            "{}\r{}{} {} {}",
+            clear::CurrentLine,
+            space,
+            self.highlight_indicator.as_str(highlighted),
+            self.selected_indicator.as_str(selected),
+            choice.text()
         )?)
     }
 }

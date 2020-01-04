@@ -46,6 +46,7 @@ impl Choice for String {
 impl<'a, T, V> Choice for (T, V)
 where
     T: fmt::Display,
+    
 {
     type Text = T;
     type Value = V;
