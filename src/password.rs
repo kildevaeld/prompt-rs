@@ -1,23 +1,21 @@
-use super::error::{ErrorKind, Result};
-use super::theme::Theme;
-use std::io::{stdin, stdout, Write};
+use super::editor::Editor;
+use super::error::{Error, Result};
+use super::theme::{Theme, DEFAULT_THEME};
+use std::io::{stdin, stdout, Read, Write};
 use termion::input::TermRead;
 
 pub struct PasswordBuilder<'de> {
     msg: &'de str,
-    theme: Theme,
+    theme: Option<Theme>,
 }
 
 impl<'de> PasswordBuilder<'de> {
     pub fn new(msg: &'de str) -> PasswordBuilder<'de> {
-        PasswordBuilder {
-            msg,
-            theme: Theme::default(),
-        }
+        PasswordBuilder { msg, theme: None }
     }
 
     pub fn theme(mut self, theme: Theme) -> PasswordBuilder<'de> {
-        self.theme = theme;
+        self.theme = Some(theme);
         self
     }
 
@@ -31,31 +29,44 @@ impl<'de> PasswordBuilder<'de> {
 
 pub struct Password<'de> {
     msg: &'de str,
-    theme: Theme,
+    theme: Option<Theme>,
 }
 
 impl<'de> Password<'de> {
-
     pub fn new(msg: &'de str) -> PasswordBuilder<'de> {
         PasswordBuilder::new(msg)
     }
 
     pub fn run(&self) -> Result<String> {
-        let stdin = stdin();
-        let mut stdout = stdout();
+        <Password as Editor>::run(
+            self,
+            &mut stdin(),
+            &mut stdout(),
+            self.theme.as_ref().unwrap_or(&DEFAULT_THEME),
+        )
+    }
+}
 
-        self.theme.print_question(&mut stdout, self.msg)?;
+impl<'de> Editor for Password<'de> {
+    type Output = String;
+    fn run<R: Read, W: Write>(
+        &self,
+        stdin: &mut R,
+        stdout: &mut W,
+        theme: &Theme,
+    ) -> Result<Self::Output> {
+        theme.print_question(stdout, self.msg)?;
 
-        stdout.lock().flush()?;
+        stdout.flush()?;
 
-        let pass = stdin.lock().read_passwd(&mut stdout)?;
+        let pass = stdin.read_passwd(stdout)?;
 
         let pass = match pass {
             Some(o) => o,
-            None => return Err(ErrorKind::NoMoreInput.into()),
+            None => return Err(Error::NoMoreInput),
         };
 
-        self.theme.print_results(&mut stdout, self.msg, "")?;
+        theme.print_results(stdout, self.msg, "")?;
 
         Ok(pass)
     }

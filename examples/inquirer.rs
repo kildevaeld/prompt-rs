@@ -1,6 +1,13 @@
 extern crate prompt;
+use failure::ResultExt;
 
 fn main() {
+
+   
+    let mut form = prompt::Form::default();
+    form.run(prompt::Confirm::new("Confirm this").default(false)).context("").unwrap();
+
+
     let confirm = prompt::confirm("Confirm this?").unwrap();
     prompt::input("name:").unwrap();
     prompt::passwd("password:").unwrap();

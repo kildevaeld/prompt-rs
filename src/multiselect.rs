@@ -1,8 +1,9 @@
 use super::choice::Choice;
-use super::error::{ErrorKind, Result};
-use super::theme::Theme;
+use super::editor::Editor;
+use super::error::{Error, Result};
+use super::theme::{Theme, DEFAULT_THEME};
 use std::collections::HashMap;
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, stdout, Read, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
@@ -15,7 +16,7 @@ where
     msg: &'de str,
     choices: &'de [C],
     page_size: usize,
-    theme: Theme,
+    theme: Option<Theme>,
     min: usize,
     max: usize,
 }
@@ -29,7 +30,7 @@ where
             msg,
             choices,
             page_size: 8,
-            theme: Theme::default(),
+            theme: None,
             min: 0,
             max: 0,
         }
@@ -69,7 +70,7 @@ where
     msg: &'de str,
     choices: &'de [C],
     page_size: usize,
-    theme: Theme,
+    theme: Option<Theme>,
     min: usize,
     max: usize,
 }
@@ -83,10 +84,29 @@ where
     }
 
     pub fn run(&self) -> Result<Vec<&'de C>> {
-        let stdin = stdin();
-        let mut stdout = stdout().into_raw_mode()?;
+        <MultiSelect<'de, C, V> as Editor>::run(
+            self,
+            &mut stdin(),
+            &mut stdout(),
+            self.theme.as_ref().unwrap_or(&DEFAULT_THEME),
+        )
+    }
+}
 
-        self.theme.print_question(&mut stdout, self.msg)?;
+impl<'de, C, V> Editor for MultiSelect<'de, C, V>
+where
+    C: Choice<Value = V>,
+{
+    type Output = Vec<&'de C>;
+    fn run<R: Read, W: Write>(
+        &self,
+        stdin: &mut R,
+        stdout: &mut W,
+        theme: &Theme,
+    ) -> Result<Self::Output> {
+        let mut stdout = stdout.into_raw_mode()?;
+
+        theme.print_question(&mut stdout, self.msg)?;
         write!(stdout, "\n{}", cursor::Hide)?;
 
         let rows = std::cmp::min(self.choices.len(), self.page_size);
@@ -108,7 +128,7 @@ where
 
             for (i, s) in self.choices.iter().skip(offset).take(rows).enumerate() {
                 write!(stdout, "\n\r{}", clear::CurrentLine)?;
-                self.theme.print_multiple_choice(
+                theme.print_multiple_choice(
                     &mut stdout,
                     s,
                     cur == i,
@@ -116,7 +136,7 @@ where
                 )?;
             }
 
-            stdout.lock().flush()?;
+            stdout.flush()?;
 
             let next = input.next().unwrap();
 
@@ -148,7 +168,7 @@ where
                 }
                 Key::Ctrl('c') => {
                     write!(stdout, "\n\r{}", cursor::Show)?;
-                    return Err(ErrorKind::UserAborted.into());
+                    return Err(Error::UserAborted);
                 }
                 _ => {}
             }
@@ -163,7 +183,7 @@ where
         let mut choices = choices.iter().map(|m| *m.0).collect::<Vec<_>>();
         choices.sort();
 
-        self.theme.print_results(
+        theme.print_results(
             &mut stdout,
             self.msg,
             choices

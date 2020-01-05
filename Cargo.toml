@@ -11,5 +11,6 @@ path = "examples/inquirer.rs"
 
 [dependencies]
 termion = "~1.5.1"
-error-chain = "~0.12"
 strip-ansi-escapes = "0.1"
+lazy_static = "1.4"
+failure = "0.1"

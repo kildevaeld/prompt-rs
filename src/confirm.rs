@@ -1,6 +1,7 @@
-use super::error::{ErrorKind, Result};
-use super::theme::{Color, Theme};
-use std::io::{stdin, stdout, Write};
+use super::error::{Error, Result};
+use super::theme::{Color, Theme, DEFAULT_THEME};
+use super::{Editor, IntoEditor};
+use std::io::{stdin, stdout, Read, Write};
 use termion::cursor;
 use termion::event::Key;
 use termion::input::TermRead;
@@ -8,7 +9,7 @@ use termion::raw::IntoRawMode;
 
 pub struct ConfirmBuilder<'de> {
     msg: &'de str,
-    theme: Theme,
+    theme: Option<Theme>,
     default: bool,
 }
 
@@ -17,8 +18,13 @@ impl<'de> ConfirmBuilder<'de> {
         ConfirmBuilder {
             msg,
             default: true,
-            theme: Theme::default(),
+            theme: None,
         }
+    }
+
+    pub fn default(mut self, default: bool) -> ConfirmBuilder<'de> {
+        self.default = default;
+        self
     }
 
     pub fn build(self) -> Confirm<'de> {
@@ -30,16 +36,44 @@ impl<'de> ConfirmBuilder<'de> {
     }
 }
 
+impl<'de> IntoEditor for ConfirmBuilder<'de> {
+    type Editor = Confirm<'de>;
+    fn into_editor(self) -> Self::Editor {
+        self.build()
+    }
+}
+
 pub struct Confirm<'de> {
     msg: &'de str,
-    theme: Theme,
+    theme: Option<Theme>,
     default: bool,
 }
 
 impl<'de> Confirm<'de> {
+    pub fn new(msg: &'de str) -> ConfirmBuilder<'de> {
+        ConfirmBuilder::new(msg)
+    }
+
     pub fn run(&self) -> Result<bool> {
-        let stdin = stdin();
-        let mut stdout = stdout().into_raw_mode()?;
+        <Confirm as Editor>::run(
+            self,
+            &mut stdin(),
+            &mut stdout(),
+            self.theme.as_ref().unwrap_or(&DEFAULT_THEME),
+        )
+    }
+}
+
+impl<'de> Editor for Confirm<'de> {
+    type Output = bool;
+
+    fn run<R: Read, W: Write>(
+        &self,
+        stdin: &mut R,
+        stdout: &mut W,
+        theme: &Theme,
+    ) -> Result<Self::Output> {
+        let mut stdout = stdout.into_raw_mode()?;
 
         let msg = format!(
             "{} {}",
@@ -47,13 +81,13 @@ impl<'de> Confirm<'de> {
             Color::Magenta.wrap(if self.default { "[Yn]" } else { "[yN]" })
         );
 
-        self.theme.print_question(&mut stdout, &msg)?;
+        theme.print_question(&mut stdout, &msg)?;
 
         let mut input = stdin.keys();
 
         let mut choice = self.default;
 
-        stdout.lock().flush();
+        stdout.flush()?;
 
         loop {
             let next = input.next().unwrap();
@@ -65,7 +99,7 @@ impl<'de> Confirm<'de> {
                 }
                 Key::Ctrl('c') => {
                     write!(stdout, "\n\r{}", cursor::Show)?;
-                    return Err(ErrorKind::UserAborted.into());
+                    return Err(Error::UserAborted);
                 }
                 Key::Char('y') => {
                     choice = true;
@@ -79,8 +113,7 @@ impl<'de> Confirm<'de> {
             }
         }
 
-        self.theme
-            .print_results(&mut stdout, self.msg, if choice { "yes" } else { "no" })?;
+        theme.print_results(&mut stdout, self.msg, if choice { "yes" } else { "no" })?;
 
         Ok(choice)
     }

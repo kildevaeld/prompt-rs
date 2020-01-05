@@ -1,9 +1,3 @@
-//#![feature(try_trait)]
-
-extern crate termion;
-#[macro_use]
-extern crate error_chain;
-
 mod choice;
 pub mod error;
 mod input;
@@ -12,6 +6,9 @@ mod select;
 mod multiselect;
 mod confirm;
 mod theme;
+mod editor;
+mod form;
+// mod multiline;
 
 pub use self::choice::*;
 pub use self::input::*;
@@ -20,3 +17,6 @@ pub use self::select::*;
 pub use self::multiselect::*;
 pub use self::theme::*;
 pub use self::confirm::*;
+pub use self::editor::*;
+pub use self::form::Form;
+// pub use self::multiline::*;

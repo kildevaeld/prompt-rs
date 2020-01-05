@@ -1,25 +1,22 @@
-use super::error::ErrorKind;
-use super::error::Result;
-use super::theme::Theme;
-use std::io::{stdin, stdout, Write};
+use super::editor::{Editor, IntoEditor};
+use super::error::{Error, Result};
+use super::theme::{Theme, DEFAULT_THEME};
+use std::io::{stdin, stdout, Read, Write};
 use termion::cursor;
 use termion::input::TermRead;
 
 pub struct InputBuilder<'a> {
     msg: &'a str,
-    theme: Theme,
+    theme: Option<Theme>,
 }
 
 impl<'a> InputBuilder<'a> {
     pub fn new(msg: &'a str) -> InputBuilder<'a> {
-        InputBuilder {
-            msg,
-            theme: Theme::default(),
-        }
+        InputBuilder { msg, theme: None }
     }
 
     pub fn theme(mut self, theme: Theme) -> InputBuilder<'a> {
-        self.theme = theme;
+        self.theme = Some(theme);
         self
     }
 
@@ -29,36 +26,55 @@ impl<'a> InputBuilder<'a> {
             theme: self.theme,
         }
     }
+}
 
+impl<'de> IntoEditor for InputBuilder<'de> {
+    type Editor = Input<'de>;
+    fn into_editor(self) -> Self::Editor {
+        self.build()
+    }
 }
 
 pub struct Input<'a> {
     msg: &'a str,
-    theme: Theme,
+    theme: Option<Theme>,
 }
 
 impl<'a> Input<'a> {
-
     pub fn new(msg: &'a str) -> InputBuilder<'a> {
         InputBuilder::new(msg)
     }
 
     pub fn run(&self) -> Result<String> {
-        let mut stdin = stdin();
-        let mut stdout = stdout();
+        <Input as Editor>::run(
+            self,
+            &mut stdin(),
+            &mut stdout(),
+            self.theme.as_ref().unwrap_or(&DEFAULT_THEME),
+        )
+    }
+}
 
-        self.theme.print_question(&mut stdout, self.msg)?;
+impl<'a> Editor for Input<'a> {
+    type Output = String;
+    fn run<R: Read, W: Write>(
+        &self,
+        stdin: &mut R,
+        stdout: &mut W,
+        theme: &Theme,
+    ) -> Result<Self::Output> {
+        theme.print_question(stdout, self.msg)?;
 
-        stdout.lock().flush()?;
+        stdout.flush()?;
 
-        let input = match TermRead::read_line(&mut stdin) {
+        let input = match TermRead::read_line(stdin) {
             Ok(Some(s)) => s,
-            Ok(None) => return Err(ErrorKind::NoMoreInput.into()),
-            Err(e) => return Err(ErrorKind::Io(e).into()),
+            Ok(None) => return Err(Error::NoMoreInput),
+            Err(e) => return Err(Error::IoError(e)),
         };
 
         write!(stdout, "{}", cursor::Up(1))?;
-        self.theme.print_results(&mut stdout, self.msg, &input)?;
+        theme.print_results(stdout, self.msg, &input)?;
 
         Ok(input)
     }

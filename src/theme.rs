@@ -5,6 +5,13 @@ use std::io::Write;
 use std::iter::FromIterator;
 use strip_ansi_escapes::strip as normalize;
 use termion::{color, style, clear};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref DEFAULT_THEME: Theme = Theme::default();
+}
+
+
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Color {
@@ -40,6 +47,7 @@ impl fmt::Display for Color {
 }
 
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Indicator {
     pub active: String,
     pub inactive: String
@@ -55,6 +63,7 @@ impl Indicator {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Theme {
     results: Color,
     prefix: String,
