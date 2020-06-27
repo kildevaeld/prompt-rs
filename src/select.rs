@@ -87,7 +87,7 @@ where
     ) -> Result<Self::Output> {
         let mut stdout = stdout.into_raw_mode()?;
 
-        theme.print_question(&mut stdout, self.msg)?;
+        theme.print_question(&mut stdout, self.msg, None)?;
         write!(&mut stdout, "\n{}", cursor::Hide)?;
 
         let rows = std::cmp::min(self.choices.len(), self.page_size);

@@ -1,5 +1,6 @@
-use std::io;
 use failure::Fail;
+use std::fmt;
+use std::io;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -12,12 +13,20 @@ pub enum Error {
     #[fail(display = "User aborted")]
     UserAborted,
     #[fail(display = "Invalid Choice: {}", _0)]
-    InvalidChoice(usize)
+    InvalidChoice(usize),
+    #[fail(display = "Format error: {}", _0)]
+    Format(fmt::Error),
 }
 
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Self::IoError(error)
+    }
+}
+
+impl From<fmt::Error> for Error {
+    fn from(error: fmt::Error) -> Self {
+        Self::Format(error)
     }
 }
 

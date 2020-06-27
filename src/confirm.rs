@@ -75,13 +75,11 @@ impl<'de> Editor for Confirm<'de> {
     ) -> Result<Self::Output> {
         let mut stdout = stdout.into_raw_mode()?;
 
-        let msg = format!(
-            "{} {}",
-            self.msg,
-            Color::Magenta.wrap(if self.default { "[Yn]" } else { "[yN]" })
-        );
-
-        theme.print_question(&mut stdout, &msg)?;
+        theme.print_question(
+            &mut stdout,
+            &self.msg,
+            Some(if self.default { "Yn" } else { "yN" }),
+        )?;
 
         let mut input = stdin.keys();
 
