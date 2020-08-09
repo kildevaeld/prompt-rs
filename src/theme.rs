@@ -124,8 +124,11 @@ pub struct StyledString<'a> {
 }
 
 impl<'a> StyledString<'a> {
-    pub fn new(style: Style, string: Cow<'a, str>) -> StyledString<'a> {
-        StyledString { string, style }
+    pub fn new(style: Style, string: impl Into<Cow<'a, str>>) -> StyledString<'a> {
+        StyledString {
+            string: string.into(),
+            style,
+        }
     }
 }
 
@@ -300,14 +303,15 @@ impl Theme {
         write!(output, "{}", line)?;
 
         Ok(self)
-        // Ok(write!(
-        //     output,
-        //     "{}\r{}{} {}",
-        //     clear::CurrentLine,
-        //     space,
-        //     self.highlight_indicator.as_str(highlighted),
-        //     choice.text()
-        // )?)
+    }
+
+    pub fn print_error(&self, output: &mut dyn Write, error: &str) -> Result<(), io::Error> {
+        let line = self
+            .builder()
+            .styled(Style::default().fg(Color::Red), "!")
+            .plain(" ")
+            .plain(error);
+        write!(output, "{}", line)
     }
 
     pub fn print_multiple_choice<R: Write, C: Choice>(
@@ -462,9 +466,9 @@ impl<'a> LineBuilder<'a> {
                 self.theme.default
             },
             Cow::Borrowed(if on {
-                &self.theme.selected_indicator.active
+                self.theme.selected_indicator.active.as_str()
             } else {
-                &self.theme.selected_indicator.inactive
+                self.theme.selected_indicator.inactive.as_str()
             }),
         ));
         self
@@ -477,30 +481,28 @@ impl<'a> LineBuilder<'a> {
             } else {
                 self.theme.default
             },
-            Cow::Borrowed(if on {
-                &self.theme.highlight_indicator.active
+            if on {
+                self.theme.highlight_indicator.active.as_str()
             } else {
-                &self.theme.highlight_indicator.inactive
-            }),
+                self.theme.highlight_indicator.inactive.as_str()
+            },
         ));
         self
     }
 
     pub fn highlight(mut self, msg: &'a str) -> Self {
         self.writer
-            .push(StyledString::new(self.theme.highlight, Cow::Borrowed(msg)));
+            .push(StyledString::new(self.theme.highlight, msg));
         self
     }
 
     pub fn result(mut self, msg: &'a str) -> Self {
-        self.writer
-            .push(StyledString::new(self.theme.result, Cow::Borrowed(msg)));
+        self.writer.push(StyledString::new(self.theme.result, msg));
         self
     }
 
     pub fn plain(mut self, msg: &'a str) -> Self {
-        self.writer
-            .push(StyledString::new(self.theme.default, Cow::Borrowed(msg)));
+        self.writer.push(StyledString::new(self.theme.default, msg));
         self
     }
 
@@ -511,10 +513,8 @@ impl<'a> LineBuilder<'a> {
 
     pub fn prefix(mut self) -> Self {
         if let Some(prefix) = &self.theme.prefix {
-            self.writer.push(StyledString::new(
-                self.theme.prefix_style,
-                Cow::Borrowed(prefix),
-            ))
+            self.writer
+                .push(StyledString::new(self.theme.prefix_style, prefix))
         }
         self
     }

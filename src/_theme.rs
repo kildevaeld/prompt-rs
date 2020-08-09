@@ -1,17 +1,15 @@
 use super::error::Result;
 use super::Choice;
+use lazy_static::lazy_static;
 use std::fmt;
 use std::io::Write;
 use std::iter::FromIterator;
 use strip_ansi_escapes::strip as normalize;
-use termion::{color, style, clear};
-use lazy_static::lazy_static;
+use termion::{clear, color, style};
 
 lazy_static! {
     pub static ref DEFAULT_THEME: Theme = Theme::default();
 }
-
-
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Color {
@@ -46,11 +44,10 @@ impl fmt::Display for Color {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Indicator {
     pub active: String,
-    pub inactive: String
+    pub inactive: String,
 }
 
 impl Indicator {
@@ -68,7 +65,7 @@ pub struct Theme {
     results: Color,
     prefix: String,
     highlight_indicator: Indicator,
-    selected_indicator: Indicator
+    selected_indicator: Indicator,
 }
 
 impl Default for Theme {
@@ -78,12 +75,12 @@ impl Default for Theme {
             prefix: Color::Green.wrap("[?] "),
             selected_indicator: Indicator {
                 active: "◉".to_string(),
-                inactive: "◯".to_string()
+                inactive: "◯".to_string(),
             },
             highlight_indicator: Indicator {
                 active: "❯".to_string(),
-                inactive: " ".to_string()
-            }
+                inactive: " ".to_string(),
+            },
         }
     }
 }

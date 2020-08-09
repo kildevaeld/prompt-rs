@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut stdout = std::io::stdout().into_raw_mode()?;
         let (x, y) = stdout.cursor_pos()?;
         println!("START {} {}", x, y);
-        let mut c = Canvas::new(&mut stdout, &theme, (10, y + 1));
+        let mut c = Canvas::new(&mut stdout, (10, y + 1));
 
         // c.print("Jesper");
         // std::thread::sleep_ms(500);

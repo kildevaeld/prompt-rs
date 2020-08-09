@@ -1,21 +1,19 @@
 use super::editor::{Editor, IntoEditor};
 use super::error::{Error, Result};
 use super::theme::{Theme, DEFAULT_THEME};
-// use super::theme2::{Theme, DEFAULT_THEME};
+use super::validation::{Required, Validation};
 use std::io::{stdin, stdout, Read, Write};
 use termion::input::TermRead;
 use termion::{
     clear,
-    cursor::{self, DetectCursorPos},
+    cursor::{self},
 };
 
 pub struct InputBuilder<'a> {
     msg: &'a str,
     default: Option<&'a str>,
     theme: Option<Theme>,
-    required: bool,
-    min: usize,
-    max: usize,
+    validations: Vec<Box<dyn Validation<String>>>,
 }
 
 impl<'a> InputBuilder<'a> {
@@ -24,14 +22,17 @@ impl<'a> InputBuilder<'a> {
             msg,
             theme: None,
             default: None,
-            required: false,
-            min: 0,
-            max: 0,
+            validations: Vec::default(),
         }
     }
 
+    pub fn validate<V: Validation<String> + 'static>(mut self, v: V) -> Self {
+        self.validations.push(Box::new(v));
+        self
+    }
+
     pub fn required(mut self) -> Self {
-        self.required = true;
+        self.validations.push(Box::new(Required));
         self
     }
 
@@ -50,9 +51,7 @@ impl<'a> InputBuilder<'a> {
             msg: self.msg,
             theme: self.theme,
             default: self.default,
-            required: self.required,
-            min: self.min,
-            max: self.max,
+            validations: self.validations,
         }
     }
 }
@@ -68,9 +67,7 @@ pub struct Input<'a> {
     msg: &'a str,
     theme: Option<Theme>,
     default: Option<&'a str>,
-    required: bool,
-    min: usize,
-    max: usize,
+    validations: Vec<Box<dyn Validation<String>>>,
 }
 
 impl<'a> Input<'a> {
@@ -103,13 +100,16 @@ impl<'a> Editor for Input<'a> {
         let input = 'ui: loop {
             let w = theme.print_question(stdout, self.msg, self.default)?;
             if let Some(error) = &error {
-                //println!("\n\r{}", error);
                 let dir = if error.len() < w {
-                    cursor::Right((w - error.len()) as u16).to_string()
+                    cursor::Right((w - error.len() - 2) as u16).to_string()
                 } else {
-                    cursor::Left((error.len() - w) as u16).to_string()
+                    cursor::Left((error.len() - w + 2) as u16).to_string()
                 };
-                write!(stdout, "\r\n{}{}{}", error, cursor::Up(1), dir)?;
+                write!(stdout, "\r\n")?;
+                theme.print_error(stdout, &error)?;
+                write!(stdout, "{}{}", cursor::Up(1), dir)?;
+            } else {
+                write!(stdout, "\n{}{}", cursor::Up(1), cursor::Right(w as u16))?;
             }
             stdout.flush()?;
 
@@ -124,19 +124,22 @@ impl<'a> Editor for Input<'a> {
                     break 'ui input;
                 }
             }
+            error = None;
+            for v in &self.validations {
+                if let Err(err) = v.validate(&input) {
+                    error = Some(err.0);
+                    break;
+                }
+            }
 
-            if self.min > 0 && input.len() < self.min {
-            } else if self.max > 0 && input.len() > self.max {
-            } else if self.required && input.is_empty() {
-                error = Some(String::from("! This field is required"));
-            } else {
+            if error.is_none() {
                 break 'ui input;
             }
 
             write!(stdout, "\r{}", cursor::Up(1));
         };
         if error.is_some() {
-            write!(stdout, "{}", clear::CurrentLine);
+            write!(stdout, "{}", clear::CurrentLine)?;
         }
         write!(stdout, "{}", cursor::Up(1))?;
         theme.print_results(stdout, self.msg, &input)?;

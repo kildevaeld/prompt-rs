@@ -7,18 +7,11 @@ use termion::input::TermRead;
 pub struct PasswordBuilder<'de> {
     msg: &'de str,
     theme: Option<Theme>,
-    min: usize,
-    max: usize,
 }
 
 impl<'de> PasswordBuilder<'de> {
     pub fn new(msg: &'de str) -> PasswordBuilder<'de> {
-        PasswordBuilder {
-            msg,
-            theme: None,
-            min: 0,
-            max: 0,
-        }
+        PasswordBuilder { msg, theme: None }
     }
 
     pub fn theme(mut self, theme: Theme) -> PasswordBuilder<'de> {

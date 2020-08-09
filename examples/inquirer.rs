@@ -1,33 +1,35 @@
 extern crate prompt;
-use failure::ResultExt;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut form = prompt::Form::default();
-    form.run(prompt::Confirm::new("Confirm this").default(false))
-        .context("")
-        .unwrap();
+    form.run(prompt::Confirm::new("Confirm this").default(false))?;
 
-    let confirm = prompt::confirm("Confirm this?").unwrap();
+    let confirm = prompt::confirm("Confirm this?")?;
     prompt::Input::new("name")
-        .default("Rasmus")
+        //.default("Rasmus")
+        .validate(prompt::validation::MinLen(6))
+        .validate(prompt::validation::Parse::<f64>::new())
         .required()
         .build()
-        .run()
-        .unwrap();
-    prompt::passwd("password").unwrap();
+        .run()?;
+
+    prompt::passwd("password")?;
 
     let choices = (1..200)
         .map(|m| format!("Choice {}", m))
         .collect::<Vec<_>>();
 
-    let select = prompt::select("One choice:", &choices).unwrap();
+    let select = prompt::select("One choice:", &choices)?;
 
     let radio = prompt::MultiSelect::new("Multiple choices:", &choices)
-        .min(2)
-        .max(5)
+        // .min(2)
+        // .max(5)
+        .validate(prompt::validation::MinLen(4))
+        .validate(prompt::validation::MaxLen(5))
         .build()
-        .run()
-        .unwrap();
+        .run()?;
 
     println!("select {}", select);
+
+    Ok(())
 }
