@@ -11,7 +11,6 @@ mod password;
 mod select;
 mod theme;
 mod util;
-// pub mod validation;
 
 pub use self::choice::*;
 pub use self::confirm::*;
@@ -23,4 +22,3 @@ pub use self::multiselect::*;
 pub use self::password::*;
 pub use self::select::*;
 pub use self::theme::*;
-// pub use self::multiline::*;
