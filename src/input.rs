@@ -1,19 +1,21 @@
 use super::editor::{Editor, IntoEditor};
 use super::error::{Error, Result};
 use super::theme::{Theme, DEFAULT_THEME};
-use super::validation::{Required, Validation};
 use std::io::{stdin, stdout, Read, Write};
 use termion::input::TermRead;
 use termion::{
     clear,
     cursor::{self},
 };
+use valid::{self, Required, Valid, Validation};
+
+pub type Validator = Valid<Box<dyn Validation<String>>, String>;
 
 pub struct InputBuilder<'a> {
     msg: &'a str,
     default: Option<&'a str>,
     theme: Option<Theme>,
-    validations: Vec<Box<dyn Validation<String>>>,
+    validations: Option<Valid<Box<dyn Validation<String>>, String>>,
 }
 
 impl<'a> InputBuilder<'a> {
@@ -22,17 +24,25 @@ impl<'a> InputBuilder<'a> {
             msg,
             theme: None,
             default: None,
-            validations: Vec::default(),
+            validations: None,
         }
     }
 
     pub fn validate<V: Validation<String> + 'static>(mut self, v: V) -> Self {
-        self.validations.push(Box::new(v));
+        if let Some(valid) = self.validations.take() {
+            self.validations = Some(valid.and_boxed(v));
+        } else {
+            self.validations = Some(Valid::new(Box::new(v)));
+        }
         self
     }
 
     pub fn required(mut self) -> Self {
-        self.validations.push(Box::new(Required));
+        if let Some(v) = self.validations.take() {
+            self.validations = Some(v.and_boxed(valid::MinLen(1)));
+        } else {
+            self.validations = Some(Valid::new(Box::new(valid::MinLen(1))));
+        }
         self
     }
 
@@ -67,7 +77,7 @@ pub struct Input<'a> {
     msg: &'a str,
     theme: Option<Theme>,
     default: Option<&'a str>,
-    validations: Vec<Box<dyn Validation<String>>>,
+    validations: Option<Valid<Box<dyn Validation<String>>, String>>,
 }
 
 impl<'a> Input<'a> {
@@ -124,13 +134,16 @@ impl<'a> Editor for Input<'a> {
                     break 'ui input;
                 }
             }
-            error = None;
-            for v in &self.validations {
+
+            error = if let Some(v) = &self.validations {
                 if let Err(err) = v.validate(&input) {
-                    error = Some(err.0);
-                    break;
+                    Some(err.to_string())
+                } else {
+                    None
                 }
-            }
+            } else {
+                None
+            };
 
             if error.is_none() {
                 break 'ui input;

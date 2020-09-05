@@ -11,7 +11,7 @@ mod password;
 mod select;
 mod theme;
 mod util;
-pub mod validation;
+// pub mod validation;
 
 pub use self::choice::*;
 pub use self::confirm::*;

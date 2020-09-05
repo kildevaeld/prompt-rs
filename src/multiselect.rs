@@ -2,13 +2,14 @@ use super::choice::Choice;
 use super::editor::Editor;
 use super::error::Error;
 use super::theme::{Theme, DEFAULT_THEME};
-use super::validation::{Validation, ValidationError};
+// use super::validation::{Validation, ValidationError};
 use std::collections::HashMap;
 use std::io::{stdin, stdout, Read, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, cursor};
+use valid::{And, Error as ValidationError, Valid, Validation, ValidationExt};
 
 pub struct MultiSelectBuilder<'de, C, V>
 where
@@ -156,7 +157,7 @@ where
                     match self.validate(&choices) {
                         Ok(_) => break,
                         Err(err) => {
-                            error = Some(err.0);
+                            error = Some(err.to_string());
                         }
                     }
                 }
