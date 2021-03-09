@@ -46,7 +46,6 @@ impl Choice for String {
 impl<'a, T, V> Choice for (T, V)
 where
     T: fmt::Display,
-    
 {
     type Text = T;
     type Value = V;
@@ -59,12 +58,3 @@ where
         &self.1
     }
 }
-
-// impl<'a, T, V> Display for Choice<(T, V)
-// where
-//     T: Display,
-// {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "{}", self.0 as T)
-//     }
-// }

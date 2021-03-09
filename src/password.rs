@@ -55,7 +55,7 @@ impl<'de> Editor for Password<'de> {
         stdout: &mut W,
         theme: &Theme,
     ) -> Result<Self::Output> {
-        theme.print_question(stdout, self.msg)?;
+        theme.print_question(stdout, self.msg, None)?;
 
         stdout.flush()?;
 

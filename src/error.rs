@@ -1,18 +1,16 @@
+use std::error::Error as StdError;
+use std::fmt;
 use std::io;
-use failure::Fail;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 pub enum Error {
-    #[fail(display = "IO error: {}", _0)]
     IoError(io::Error),
-    #[fail(display = "No more input")]
     NoMoreInput,
-    #[fail(display = "User aborted")]
     UserAborted,
-    #[fail(display = "Invalid Choice: {}", _0)]
-    InvalidChoice(usize)
+    InvalidChoice(usize),
+    Format(fmt::Error),
 }
 
 impl From<io::Error> for Error {
@@ -21,29 +19,22 @@ impl From<io::Error> for Error {
     }
 }
 
-/*
-error_chain! {
-
-    foreign_links {
-        Io(io::Error);
+impl From<fmt::Error> for Error {
+    fn from(error: fmt::Error) -> Self {
+        Self::Format(error)
     }
-
-    errors {
-        NoMoreInput {
-            description("")
-            display("")
-        }
-
-        UserAborted {
-            description("")
-            display("")
-        }
-
-        InvalidChoice(index:usize) {
-            description("")
-            display("")
-        }
-    }
-
 }
-*/
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::IoError(err) => write!(f, "Io error: {}", err),
+            Error::NoMoreInput => write!(f, "No more input"),
+            Error::UserAborted => write!(f, "User aborted"),
+            Error::InvalidChoice(idx) => write!(f, "Invalid choice at inedx: {}", idx),
+            Error::Format(err) => write!(f, "Formatting error: {}", err),
+        }
+    }
+}
+
+impl StdError for Error {}

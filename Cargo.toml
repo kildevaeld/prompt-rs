@@ -10,7 +10,7 @@ path = "examples/inquirer.rs"
 
 
 [dependencies]
-termion = "~1.5.1"
+termion = "1.5"
+valid = { git = "https://github.com/kildevaeld/valid-rs" }
 strip-ansi-escapes = "0.1"
 lazy_static = "1.4"
-failure = "0.1"

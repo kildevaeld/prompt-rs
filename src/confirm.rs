@@ -1,5 +1,5 @@
 use super::error::{Error, Result};
-use super::theme::{Color, Theme, DEFAULT_THEME};
+use super::theme::{Theme, DEFAULT_THEME};
 use super::{Editor, IntoEditor};
 use std::io::{stdin, stdout, Read, Write};
 use termion::cursor;
@@ -75,13 +75,13 @@ impl<'de> Editor for Confirm<'de> {
     ) -> Result<Self::Output> {
         let mut stdout = stdout.into_raw_mode()?;
 
-        let msg = format!(
-            "{} {}",
-            self.msg,
-            Color::Magenta.wrap(if self.default { "[Yn]" } else { "[yN]" })
-        );
+        let w = theme.print_question(
+            &mut stdout,
+            &self.msg,
+            Some(if self.default { "Yn" } else { "yN" }),
+        )?;
 
-        theme.print_question(&mut stdout, &msg)?;
+        write!(stdout, "\n\r{}{}", cursor::Up(1), cursor::Right(w as u16))?;
 
         let mut input = stdin.keys();
 

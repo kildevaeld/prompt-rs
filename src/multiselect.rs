@@ -1,13 +1,15 @@
 use super::choice::Choice;
 use super::editor::Editor;
-use super::error::{Error, Result};
+use super::error::Error;
 use super::theme::{Theme, DEFAULT_THEME};
+// use super::validation::{Validation, ValidationError};
 use std::collections::HashMap;
 use std::io::{stdin, stdout, Read, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, cursor};
+use valid::{Error as ValidationError, Validation};
 
 pub struct MultiSelectBuilder<'de, C, V>
 where
@@ -17,8 +19,7 @@ where
     choices: &'de [C],
     page_size: usize,
     theme: Option<Theme>,
-    min: usize,
-    max: usize,
+    validations: Vec<Box<dyn Validation<Vec<&'de C>>>>,
 }
 
 impl<'de, C, V> MultiSelectBuilder<'de, C, V>
@@ -31,8 +32,7 @@ where
             choices,
             page_size: 8,
             theme: None,
-            min: 0,
-            max: 0,
+            validations: Vec::default(),
         }
     }
 
@@ -41,13 +41,8 @@ where
         self
     }
 
-    pub fn max(mut self, max: usize) -> MultiSelectBuilder<'de, C, V> {
-        self.max = max;
-        self
-    }
-
-    pub fn min(mut self, min: usize) -> MultiSelectBuilder<'de, C, V> {
-        self.min = min;
+    pub fn validate<VV: Validation<Vec<&'de C>> + 'static>(mut self, v: VV) -> Self {
+        self.validations.push(Box::new(v));
         self
     }
 
@@ -57,8 +52,7 @@ where
             choices: self.choices,
             page_size: self.page_size,
             theme: self.theme,
-            min: self.min,
-            max: self.max,
+            validations: self.validations,
         }
     }
 }
@@ -71,8 +65,7 @@ where
     choices: &'de [C],
     page_size: usize,
     theme: Option<Theme>,
-    min: usize,
-    max: usize,
+    validations: Vec<Box<dyn Validation<Vec<&'de C>>>>,
 }
 
 impl<'de, C, V> MultiSelect<'de, C, V>
@@ -83,13 +76,20 @@ where
         MultiSelectBuilder::new(msg, choices)
     }
 
-    pub fn run(&self) -> Result<Vec<&'de C>> {
+    pub fn run(&self) -> Result<Vec<&'de C>, Error> {
         <MultiSelect<'de, C, V> as Editor>::run(
             self,
             &mut stdin(),
             &mut stdout(),
             self.theme.as_ref().unwrap_or(&DEFAULT_THEME),
         )
+    }
+
+    pub fn validate(&self, val: &Vec<&'de C>) -> Result<(), ValidationError> {
+        for v in &self.validations {
+            v.validate(val)?;
+        }
+        Ok(())
     }
 }
 
@@ -103,10 +103,10 @@ where
         stdin: &mut R,
         stdout: &mut W,
         theme: &Theme,
-    ) -> Result<Self::Output> {
+    ) -> Result<Self::Output, Error> {
         let mut stdout = stdout.into_raw_mode()?;
 
-        theme.print_question(&mut stdout, self.msg)?;
+        theme.print_question(&mut stdout, self.msg, None)?;
         write!(stdout, "\n{}", cursor::Hide)?;
 
         let rows = std::cmp::min(self.choices.len(), self.page_size);
@@ -122,6 +122,8 @@ where
 
         let mut choices: HashMap<usize, &C> = HashMap::default();
 
+        let mut error: Option<String> = None;
+
         loop {
             write!(stdout, "{}", cursor::Up((rows + 0) as u16))?;
             let cur_idx = offset + cur;
@@ -136,6 +138,14 @@ where
                 )?;
             }
 
+            if let Some(error) = &error {
+                write!(stdout, "\r\n")?;
+                theme.print_error(&mut stdout, error)?;
+                write!(stdout, "{}", cursor::Up(1))?;
+            } else {
+                write!(stdout, "\n{}", cursor::Up(1))?;
+            }
+
             stdout.flush()?;
 
             let next = input.next().unwrap();
@@ -143,8 +153,12 @@ where
             match next? {
                 // Enter
                 Key::Char('\n') => {
-                    if choices.len() >= self.min {
-                        break;
+                    let choices = choices.iter().map(|m| *m.1).collect::<Vec<_>>();
+                    match self.validate(&choices) {
+                        Ok(_) => break,
+                        Err(err) => {
+                            error = Some(err.to_string());
+                        }
                     }
                 }
                 Key::Up if cur != 0 => {
@@ -162,7 +176,7 @@ where
                 Key::Char(' ') => {
                     if choices.contains_key(&cur_idx) {
                         choices.remove(&cur_idx);
-                    } else if self.max == 0 || choices.len() < self.max {
+                    } else {
                         choices.insert(cur_idx, &self.choices[cur_idx]);
                     }
                 }
@@ -191,7 +205,7 @@ where
                 .map(|m| self.choices[*m].text().to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
-                .as_str(), //.text().to_string().as_str(),
+                .as_str(),
         )?;
 
         let choices = choices
@@ -203,7 +217,7 @@ where
     }
 }
 
-pub fn multi_select<'de, C, V>(msg: &'de str, choices: &'de [C]) -> Result<Vec<&'de C>>
+pub fn multi_select<'de, C, V>(msg: &'de str, choices: &'de [C]) -> Result<Vec<&'de C>, Error>
 where
     C: Choice<Value = V>,
 {
