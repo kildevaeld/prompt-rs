@@ -46,5 +46,3 @@ impl Default for Form<Stdin, StdoutWrap> {
         }
     }
 }
-
-pub struct FormBuilder {}

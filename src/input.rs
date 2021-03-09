@@ -7,7 +7,7 @@ use termion::{
     clear,
     cursor::{self},
 };
-use valid::{self, Required, Valid, Validation};
+use valid::{self, Valid, Validation};
 
 pub type Validator = Valid<Box<dyn Validation<String>>, String>;
 
@@ -149,8 +149,9 @@ impl<'a> Editor for Input<'a> {
                 break 'ui input;
             }
 
-            write!(stdout, "\r{}", cursor::Up(1));
+            write!(stdout, "\r{}", cursor::Up(1))?;
         };
+
         if error.is_some() {
             write!(stdout, "{}", clear::CurrentLine)?;
         }

@@ -1,10 +1,10 @@
 use super::choice::Choice;
 use std::borrow::Cow;
-use std::fmt::{self, Write as FmtWrite};
+use std::fmt::{self};
 use std::io::{self, Write};
 use std::iter::FromIterator;
 use strip_ansi_escapes::strip as normalize;
-use termion::{clear, color, cursor, style};
+use termion::{clear, color, style};
 
 lazy_static::lazy_static! {
     pub static ref DEFAULT_THEME: Theme = Theme::new();
@@ -308,6 +308,7 @@ impl Theme {
     pub fn print_error(&self, output: &mut dyn Write, error: &str) -> Result<(), io::Error> {
         let line = self
             .builder()
+            .plain(clear::CurrentLine.as_ref())
             .styled(Style::default().fg(Color::Red), "!")
             .plain(" ")
             .plain(error);

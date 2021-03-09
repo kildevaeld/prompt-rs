@@ -9,7 +9,7 @@ use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use termion::{clear, cursor};
-use valid::{And, Error as ValidationError, Valid, Validation, ValidationExt};
+use valid::{Error as ValidationError, Validation};
 
 pub struct MultiSelectBuilder<'de, C, V>
 where

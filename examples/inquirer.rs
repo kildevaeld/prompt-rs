@@ -19,12 +19,12 @@ pub fn input() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    input();
+    input()?;
 
     let mut form = prompt::Form::default();
     form.run(prompt::Confirm::new("Confirm this").default(false))?;
 
-    let confirm = prompt::confirm("Confirm this?")?;
+    prompt::confirm("Confirm this?")?;
     prompt::Input::new("name")
         //.default("Rasmus")
         .validate(valid::MinLen(6))
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let select = prompt::select("One choice:", &choices)?;
 
-    let radio = prompt::MultiSelect::new("Multiple choices:", &choices)
+    prompt::MultiSelect::new("Multiple choices:", &choices)
         .validate(valid::MinLen(4))
         .validate(valid::MaxLen(5))
         .build()
