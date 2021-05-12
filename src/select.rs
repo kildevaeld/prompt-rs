@@ -115,7 +115,6 @@ where
 
             match next? {
                 Key::Char('\n') => {
-                    // Enter
                     break;
                 }
                 Key::Up if cur != 0 => {

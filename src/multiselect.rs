@@ -187,7 +187,7 @@ where
                 _ => {}
             }
         }
-        // Clears choices
+        // Clear choices
         for _ in 0..(rows + 1) {
             write!(stdout, "{}{}", clear::CurrentLine, cursor::Up(1))?;
         }

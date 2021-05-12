@@ -429,7 +429,7 @@ impl ThemeBuilder {
         Theme {
             prefix: Some(self.prefix.unwrap_or_else(|| String::from("? "))),
             prefix_style: self.prefix_style,
-            separator: self.separator.unwrap_or_else(|| String::from(" ")), //.unwrap_or_else(|| String::from("? ")),
+            separator: self.separator.unwrap_or_else(|| String::from(" ")),
             default: self.default,
             highlight: self.highlight,
             selected: self.selected,
